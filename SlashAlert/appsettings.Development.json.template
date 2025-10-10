@@ -1,0 +1,16 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "CosmosDb": {
+    "EndpointUri": "https://your-cosmos-endpoint.documents.azure.com:443/",
+    "PrimaryKey": "your-cosmos-primary-key-here",
+    "DatabaseName": "SlashAlertDB",
+    "ContainerName": "Users",
+    "UsersContainerName": "Users",
+    "AlertsContainerName": "Alerts"
+  }
+}

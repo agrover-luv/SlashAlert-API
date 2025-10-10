@@ -19,6 +19,11 @@ You need to add these secrets to your GitHub repository:
 - **Value**: `[YOUR_COSMOS_DB_PRIMARY_KEY_HERE]`
 - **Description**: Your Azure Cosmos DB primary access key (get from Azure Portal)
 
+### 3. AZURE_RESOURCE_GROUP (Optional)
+- **Value**: `slash-alert-api_group` (or your actual resource group name)
+- **Description**: Azure Resource Group containing your web app
+- **Note**: If not provided, workflow will use default name "slash-alert-api_group"
+
 ## 🔧 How to Add GitHub Secrets
 
 ### Step 1: Go to Repository Settings
@@ -69,8 +74,10 @@ You need to add these secrets to your GitHub repository:
 - ✅ Clear error messages if secrets are missing
 
 #### 3. **GitHub Workflow** (Secure Deployment)
-- ✅ Sets environment variables from GitHub Secrets
+- ✅ Sets environment variables from GitHub Secrets during deployment
+- ✅ Uses Azure CLI to configure app settings
 - ✅ Deploys to Azure with secure configuration
+- ✅ Includes environment configuration for proper deployment tracking
 
 ## 🔄 Deployment Flow
 
