@@ -51,6 +51,13 @@ jobs:
         with:
           name: .net-app
       
+      - name: Debug federated identity info
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Expected subject: repo:${{ github.repository }}:environment:Production"
+      
       - name: Login to Azure
         uses: azure/login@v2
         with:
