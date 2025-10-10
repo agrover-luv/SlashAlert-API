@@ -7,7 +7,27 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddOpenApi();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo 
+    { 
+        Title = "SlashAlert API", 
+        Version = "v1",
+        Description = "OAuth User Management API for SlashAlert"
+    });
+});
+
+// Add CORS for development and production
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", builder =>
+    {
+        builder
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
 
 // Configure Cosmos DB
 builder.Services.Configure<CosmosDbSettings>(
@@ -34,12 +54,18 @@ builder.Services.AddScoped<ICosmosDbService, CosmosDbService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Enable CORS
+app.UseCors("AllowAll");
+
+// Enable Swagger in all environments for API documentation
+app.MapOpenApi();
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.MapOpenApi();
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "SlashAlert API v1");
+    c.RoutePrefix = "swagger";
+    c.DocumentTitle = "SlashAlert API Documentation";
+});
 
 // Redirect root to Swagger
 app.MapGet("/", () => Results.Redirect("/swagger"))
