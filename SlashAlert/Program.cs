@@ -1,8 +1,35 @@
+using Microsoft.Azure.Cosmos;
+using SlashAlert.Models;
+using SlashAlert.Services;
+using UserModel = SlashAlert.Models.User;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddSwaggerGen();
+
+// Configure Cosmos DB
+builder.Services.Configure<CosmosDbSettings>(
+    builder.Configuration.GetSection("CosmosDb"));
+
+builder.Services.AddSingleton<CosmosClient>(serviceProvider =>
+{
+    var cosmosDbSettings = builder.Configuration.GetSection("CosmosDb").Get<CosmosDbSettings>();
+    
+    // Try to get connection string from environment variables (for production)
+    var endpoint = Environment.GetEnvironmentVariable("COSMOS_DB_ENDPOINT") ?? cosmosDbSettings?.EndpointUri;
+    var key = Environment.GetEnvironmentVariable("COSMOS_DB_PRIMARY_KEY") ?? cosmosDbSettings?.PrimaryKey;
+    
+    if (string.IsNullOrEmpty(endpoint) || string.IsNullOrEmpty(key))
+    {
+        throw new InvalidOperationException("Cosmos DB endpoint and key must be configured either in appsettings.json or as environment variables.");
+    }
+    
+    return new CosmosClient(endpoint, key);
+});
+
+builder.Services.AddScoped<ICosmosDbService, CosmosDbService>();
 
 var app = builder.Build();
 
@@ -10,32 +37,85 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// Redirect root to Swagger
+app.MapGet("/", () => Results.Redirect("/swagger"))
+    .WithName("RedirectToSwagger")
+    .WithSummary("Redirect to Swagger documentation")
+    .ExcludeFromDescription();
 
-var summaries = new[]
+// OAuth User API endpoints
+app.MapGet("/api/users", async (ICosmosDbService cosmosDbService) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
+    var users = await cosmosDbService.GetAllUsersAsync();
+    return Results.Ok(users);
 })
-.WithName("GetWeatherForecast");
+.WithName("GetUsers")
+.WithSummary("Get all OAuth users")
+.WithDescription("Retrieves all OAuth users from the database")
+.WithOpenApi();
+
+app.MapGet("/api/users/{id}/{partitionKey}", async (string id, string partitionKey, ICosmosDbService cosmosDbService) =>
+{
+    var user = await cosmosDbService.GetUserByIdAsync(id, partitionKey);
+    return user != null ? Results.Ok(user) : Results.NotFound($"User with ID {id} not found");
+})
+.WithName("GetUser")
+.WithSummary("Get OAuth user by ID and partition key")
+.WithDescription("Retrieves a specific OAuth user by their ID and partition key")
+.WithOpenApi();
+
+app.MapGet("/api/users/sub/{sub}", async (string sub, ICosmosDbService cosmosDbService) =>
+{
+    var user = await cosmosDbService.GetUserBySubAsync(sub);
+    return user != null ? Results.Ok(user) : Results.NotFound($"User with subject {sub} not found");
+})
+.WithName("GetUserBySub")
+.WithSummary("Get OAuth user by subject")
+.WithDescription("Retrieves a user by their OAuth subject identifier")
+.WithOpenApi();
+
+app.MapGet("/api/users/email/{email}", async (string email, ICosmosDbService cosmosDbService) =>
+{
+    var user = await cosmosDbService.GetUserByEmailAsync(email);
+    return user != null ? Results.Ok(user) : Results.NotFound($"User with email {email} not found");
+})
+.WithName("GetUserByEmail")
+.WithSummary("Get OAuth user by email")
+.WithDescription("Retrieves a user by their email address")
+.WithOpenApi();
+
+app.MapGet("/api/users/provider/{provider}", async (string provider, ICosmosDbService cosmosDbService) =>
+{
+    var users = await cosmosDbService.GetUsersByProviderAsync(provider);
+    return Results.Ok(users);
+})
+.WithName("GetUsersByProvider")
+.WithSummary("Get OAuth users by provider")
+.WithDescription("Retrieves all users from a specific OAuth provider (e.g., 'google', 'facebook', 'twitter')")
+.WithOpenApi();
+
+app.MapGet("/api/users/active", async (ICosmosDbService cosmosDbService) =>
+{
+    var users = await cosmosDbService.GetActiveUsersAsync();
+    return Results.Ok(users);
+})
+.WithName("GetActiveUsers")
+.WithSummary("Get active OAuth users")
+.WithDescription("Retrieves all active OAuth users")
+.WithOpenApi();
+
+app.MapGet("/api/users/recent-logins", async (int days, ICosmosDbService cosmosDbService) =>
+{
+    var users = await cosmosDbService.GetRecentLoginsAsync(days);
+    return Results.Ok(users);
+})
+.WithName("GetRecentLogins")
+.WithSummary("Get users with recent logins")
+.WithDescription("Retrieves users who have logged in within the specified number of days (default: 30)")
+.WithOpenApi();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
