@@ -38,6 +38,9 @@ jobs:
   deploy:
     runs-on: windows-latest
     needs: build
+    permissions:
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
 
     steps:
       - name: Download artifact from build job
@@ -45,6 +48,13 @@ jobs:
         with:
           name: .net-app
       
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_9179E60157F5437AA0725FF7CFA24CDE }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_C903C27CE1EF4A76BE5F51E94A2D7F2E }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_E1026BBD492C4FF88C1B6711BE83E834 }}
+
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
@@ -52,13 +62,4 @@ jobs:
           app-name: 'slash-alert-api'
           slot-name: 'Production'
           package: .
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
-      
-      - name: Set App Settings via Azure CLI (if available)
-        run: |
-          echo "App deployed successfully. Configure app settings manually in Azure Portal:"
-          echo "1. Go to Azure Portal → App Services → slash-alert-api"
-          echo "2. Go to Configuration → Application settings"
-          echo "3. Add: COSMOS_DB_ENDPOINT and COSMOS_DB_PRIMARY_KEY"
-        continue-on-error: true
           
