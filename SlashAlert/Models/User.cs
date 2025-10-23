@@ -2,11 +2,8 @@ using System.Text.Json.Serialization;
 
 namespace SlashAlert.Models
 {
-    public class User
+    public class User : BaseEntity
     {
-        [JsonPropertyName("id")]
-        public string Id { get; set; } = string.Empty;
-
         [JsonPropertyName("partitionKey")]
         public string PartitionKey { get; set; } = string.Empty;
 
