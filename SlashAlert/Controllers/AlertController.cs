@@ -3,13 +3,16 @@ using SlashAlert.Repositories.Interfaces;
 
 namespace SlashAlert.Api.Controllers
 {
+    /// <summary>
+    /// Controller for managing alert data from multiple sources (Cosmos DB containers, SQL tables, or CSV files)
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    public class AlertExportController : ControllerBase
+    public class AlertController : ControllerBase
     {
         private readonly IAlertRepository _alertRepository;
 
-        public AlertExportController(IAlertRepository alertRepository)
+        public AlertController(IAlertRepository alertRepository)
         {
             _alertRepository = alertRepository;
         }

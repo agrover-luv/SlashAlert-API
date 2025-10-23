@@ -3,13 +3,16 @@ using SlashAlert.Repositories.Interfaces;
 
 namespace SlashAlert.Api.Controllers
 {
+    /// <summary>
+    /// Controller for managing price history data from multiple sources (Cosmos DB containers, SQL tables, or CSV files)
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    public class PriceHistoryExportController : ControllerBase
+    public class PriceHistoryController : ControllerBase
     {
         private readonly IPriceHistoryRepository _priceHistoryRepository;
 
-        public PriceHistoryExportController(IPriceHistoryRepository priceHistoryRepository)
+        public PriceHistoryController(IPriceHistoryRepository priceHistoryRepository)
         {
             _priceHistoryRepository = priceHistoryRepository;
         }

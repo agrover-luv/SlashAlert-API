@@ -3,13 +3,16 @@ using SlashAlert.Repositories.Interfaces;
 
 namespace SlashAlert.Api.Controllers
 {
+    /// <summary>
+    /// Controller for managing price cache data from multiple sources (Cosmos DB containers, SQL tables, or CSV files)
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    public class PriceCacheExportController : ControllerBase
+    public class PriceCacheController : ControllerBase
     {
         private readonly IPriceCacheRepository _priceCacheRepository;
 
-        public PriceCacheExportController(IPriceCacheRepository priceCacheRepository)
+        public PriceCacheController(IPriceCacheRepository priceCacheRepository)
         {
             _priceCacheRepository = priceCacheRepository;
         }

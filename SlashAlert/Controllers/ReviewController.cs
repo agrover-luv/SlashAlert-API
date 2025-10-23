@@ -3,13 +3,16 @@ using SlashAlert.Repositories.Interfaces;
 
 namespace SlashAlert.Api.Controllers
 {
+    /// <summary>
+    /// Controller for managing review data from multiple sources (Cosmos DB containers, SQL tables, or CSV files)
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    public class ReviewExportController : ControllerBase
+    public class ReviewController : ControllerBase
     {
         private readonly IReviewRepository _reviewRepository;
 
-        public ReviewExportController(IReviewRepository reviewRepository)
+        public ReviewController(IReviewRepository reviewRepository)
         {
             _reviewRepository = reviewRepository;
         }

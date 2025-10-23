@@ -3,13 +3,16 @@ using SlashAlert.Repositories.Interfaces;
 
 namespace SlashAlert.Api.Controllers
 {
+    /// <summary>
+    /// Controller for managing retailer data from multiple sources (Cosmos DB containers, SQL tables, or CSV files)
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    public class RetailerExportController : ControllerBase
+    public class RetailerController : ControllerBase
     {
         private readonly IRetailerRepository _retailerRepository;
 
-        public RetailerExportController(IRetailerRepository retailerRepository)
+        public RetailerController(IRetailerRepository retailerRepository)
         {
             _retailerRepository = retailerRepository;
         }
