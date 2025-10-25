@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using SlashAlert.Repositories.Interfaces;
 
 namespace SlashAlert.Api.Controllers
@@ -8,6 +9,7 @@ namespace SlashAlert.Api.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize] // Require authentication for all endpoints
     public class PriceCacheController : ControllerBase
     {
         private readonly IPriceCacheRepository _priceCacheRepository;

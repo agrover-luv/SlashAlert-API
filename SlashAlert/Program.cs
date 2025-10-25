@@ -4,6 +4,10 @@ using SlashAlert.Models;
 using SlashAlert.Repositories;
 using SlashAlert.Repositories.Interfaces;
 using SlashAlert.Services;
+using SlashAlert.Middleware;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authorization;
 using UserModel = SlashAlert.Models.User;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,7 +21,35 @@ builder.Services.AddSwaggerGen(c =>
     { 
         Title = "SlashAlert API", 
         Version = "v1",
-        Description = "OAuth User Management and Export API for SlashAlert"
+        Description = "OAuth User Management and Export API for SlashAlert with Google JWT Authentication"
+    });
+    
+    // Add Google JWT Bearer Authentication to Swagger
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = @"Google JWT Authorization header using the Bearer scheme. 
+                       Enter your Google-issued JWT token in the text input below.
+                       Example: 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...'",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
     });
 });
 
@@ -36,6 +68,59 @@ builder.Services.AddCors(options =>
 // Configure Database Settings
 builder.Services.Configure<DatabaseSettings>(
     builder.Configuration.GetSection(DatabaseSettings.SectionName));
+
+// Configure Google OAuth Settings
+builder.Services.Configure<GoogleOAuthSettings>(
+    builder.Configuration.GetSection(GoogleOAuthSettings.SectionName));
+
+// Register Google Token Validation Service
+builder.Services.AddScoped<IGoogleTokenValidationService, GoogleTokenValidationService>();
+
+// Configure Authentication and Authorization
+var googleOAuthSettings = builder.Configuration.GetSection(GoogleOAuthSettings.SectionName).Get<GoogleOAuthSettings>();
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = "https://accounts.google.com";
+        options.Audience = googleOAuthSettings?.ClientId;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuers = googleOAuthSettings?.ValidIssuers ?? new List<string> { "https://accounts.google.com" },
+            ValidateAudience = !googleOAuthSettings?.DisableAudienceValidation ?? true,
+            ValidAudiences = googleOAuthSettings?.ValidAudiences ?? new List<string>(),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(5)
+        };
+        
+        // Add events for debugging
+        options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                Console.WriteLine($"Authentication failed: {context.Exception.Message}");
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = context =>
+            {
+                Console.WriteLine($"Token validated for user: {context.Principal?.Identity?.Name}");
+                return Task.CompletedTask;
+            }
+        };
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.DefaultPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+    
+    // Add custom policies if needed
+    options.AddPolicy("RequireGoogleAuth", policy =>
+        policy.RequireAuthenticatedUser()
+              .RequireClaim("iss", "https://accounts.google.com"));
+});
 
 // Configure Cosmos DB (legacy configuration for backward compatibility)
 builder.Services.Configure<CosmosDbSettings>(
@@ -103,6 +188,13 @@ var app = builder.Build();
 // Enable CORS
 app.UseCors("AllowAll");
 
+// Add Authentication and Authorization
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Add custom JWT middleware for additional token validation
+app.UseMiddleware<JwtAuthenticationMiddleware>();
+
 // Enable Swagger in all environments for API documentation
 app.MapOpenApi();
 app.UseSwagger();
@@ -110,7 +202,17 @@ app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "SlashAlert API v1");
     c.RoutePrefix = "swagger";
-    c.DocumentTitle = "SlashAlert API Documentation";
+    c.DocumentTitle = "SlashAlert API Documentation - Google JWT Auth";
+    c.DefaultModelsExpandDepth(-1); // Hide models section
+    c.DisplayRequestDuration(); // Show request duration
+    c.EnableDeepLinking(); // Enable deep linking
+    c.EnableValidator(); // Enable validator
+    
+    // Configure OAuth2 (for reference - users will use Bearer token)
+    c.OAuthClientId("208621379401-mundn85bk9cbgmoarea2esilgi8e8vqhj.apps.googleusercontent.com");
+    c.OAuthAppName("SlashAlert API");
+    c.OAuthScopeSeparator(" ");
+    c.OAuthUsePkce();
 });
 
 // Redirect root to Swagger
@@ -128,6 +230,7 @@ app.MapGet("/api/users", async (IUserRepository userRepository) =>
 .WithName("GetUsers")
 .WithSummary("Get all OAuth users")
 .WithDescription("Retrieves all OAuth users from the configured database")
+.RequireAuthorization() // Require authentication
 .WithOpenApi();
 
 app.MapGet("/api/users/{id}/{partitionKey}", async (string id, string partitionKey, IUserRepository userRepository) =>
@@ -138,6 +241,7 @@ app.MapGet("/api/users/{id}/{partitionKey}", async (string id, string partitionK
 .WithName("GetUser")
 .WithSummary("Get OAuth user by ID and partition key")
 .WithDescription("Retrieves a specific OAuth user by their ID and partition key")
+.RequireAuthorization() // Require authentication
 .WithOpenApi();
 
 app.MapGet("/api/users/sub/{sub}", async (string sub, IUserRepository userRepository) =>
@@ -148,6 +252,7 @@ app.MapGet("/api/users/sub/{sub}", async (string sub, IUserRepository userReposi
 .WithName("GetUserBySub")
 .WithSummary("Get OAuth user by subject")
 .WithDescription("Retrieves a user by their OAuth subject identifier")
+.RequireAuthorization() // Require authentication
 .WithOpenApi();
 
 app.MapGet("/api/users/email/{email}", async (string email, IUserRepository userRepository) =>
@@ -158,6 +263,7 @@ app.MapGet("/api/users/email/{email}", async (string email, IUserRepository user
 .WithName("GetUserByEmail")
 .WithSummary("Get OAuth user by email")
 .WithDescription("Retrieves a user by their email address")
+.RequireAuthorization() // Require authentication
 .WithOpenApi();
 
 app.MapGet("/api/users/provider/{provider}", async (string provider, IUserRepository userRepository) =>
@@ -168,6 +274,7 @@ app.MapGet("/api/users/provider/{provider}", async (string provider, IUserReposi
 .WithName("GetUsersByProvider")
 .WithSummary("Get OAuth users by provider")
 .WithDescription("Retrieves all users from a specific OAuth provider (e.g., 'google', 'facebook', 'twitter')")
+.RequireAuthorization() // Require authentication
 .WithOpenApi();
 
 app.MapGet("/api/users/active", async (IUserRepository userRepository) =>
@@ -178,6 +285,7 @@ app.MapGet("/api/users/active", async (IUserRepository userRepository) =>
 .WithName("GetActiveUsers")
 .WithSummary("Get active OAuth users")
 .WithDescription("Retrieves all active OAuth users")
+.RequireAuthorization() // Require authentication
 .WithOpenApi();
 
 app.MapGet("/api/users/recent-logins", async (int days, IUserRepository userRepository) =>
@@ -188,6 +296,7 @@ app.MapGet("/api/users/recent-logins", async (int days, IUserRepository userRepo
 .WithName("GetRecentLogins")
 .WithSummary("Get users with recent logins")
 .WithDescription("Retrieves users who have logged in within the specified number of days (default: 30)")
+.RequireAuthorization() // Require authentication
 .WithOpenApi();
 
 // Map controllers
