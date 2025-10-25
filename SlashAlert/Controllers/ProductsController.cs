@@ -8,11 +8,11 @@ namespace SlashAlert.Api.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    public class ProductController : ControllerBase
+    public class ProductsController : ControllerBase
     {
         private readonly IProductRepository _productRepository;
 
-        public ProductController(IProductRepository productRepository)
+        public ProductsController(IProductRepository productRepository)
         {
             _productRepository = productRepository;
         }

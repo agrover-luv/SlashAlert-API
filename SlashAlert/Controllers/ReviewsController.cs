@@ -8,11 +8,11 @@ namespace SlashAlert.Api.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    public class ReviewController : ControllerBase
+    public class ReviewsController : ControllerBase
     {
         private readonly IReviewRepository _reviewRepository;
 
-        public ReviewController(IReviewRepository reviewRepository)
+        public ReviewsController(IReviewRepository reviewRepository)
         {
             _reviewRepository = reviewRepository;
         }
