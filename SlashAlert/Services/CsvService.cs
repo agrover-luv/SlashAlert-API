@@ -4,6 +4,8 @@ using System.Globalization;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.ComponentModel;
 
 namespace SlashAlert.Api.Services
 {
@@ -105,6 +107,95 @@ namespace SlashAlert.Api.Services
             }
 
             return results;
+        }
+
+        public async Task<IEnumerable<T>> GetAllAsync<T>(string relativePath) where T : class, new()
+        {
+            return await Task.Run(() =>
+            {
+                var csvData = ReadCsv(relativePath);
+                var results = new List<T>();
+
+                foreach (var row in csvData)
+                {
+                    var obj = new T();
+                    var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+                    foreach (var property in properties)
+                    {
+                        if (row.TryGetValue(property.Name, out var value) && !string.IsNullOrEmpty(value))
+                        {
+                            try
+                            {
+                                var convertedValue = ConvertToType(value, property.PropertyType);
+                                property.SetValue(obj, convertedValue);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"Warning: Failed to set property {property.Name} with value '{value}': {ex.Message}");
+                            }
+                        }
+                    }
+                    results.Add(obj);
+                }
+
+                return results.AsEnumerable();
+            });
+        }
+
+        private static object? ConvertToType(string value, Type targetType)
+        {
+            if (string.IsNullOrEmpty(value))
+                return null;
+
+            // Handle nullable types
+            var underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+
+            // Handle Guid
+            if (underlyingType == typeof(Guid))
+            {
+                return Guid.TryParse(value, out var guid) ? guid : Guid.Empty;
+            }
+
+            // Handle DateTime
+            if (underlyingType == typeof(DateTime))
+            {
+                return DateTime.TryParse(value, out var dateTime) ? dateTime : DateTime.MinValue;
+            }
+
+            // Handle decimal
+            if (underlyingType == typeof(decimal))
+            {
+                return decimal.TryParse(value, out var decimalValue) ? decimalValue : 0m;
+            }
+
+            // Handle double
+            if (underlyingType == typeof(double))
+            {
+                return double.TryParse(value, out var doubleValue) ? doubleValue : 0d;
+            }
+
+            // Handle int
+            if (underlyingType == typeof(int))
+            {
+                return int.TryParse(value, out var intValue) ? intValue : 0;
+            }
+
+            // Handle bool
+            if (underlyingType == typeof(bool))
+            {
+                return bool.TryParse(value, out var boolValue) ? boolValue : false;
+            }
+
+            // Use TypeConverter for other types
+            var converter = TypeDescriptor.GetConverter(underlyingType);
+            if (converter.CanConvertFrom(typeof(string)))
+            {
+                return converter.ConvertFromString(value);
+            }
+
+            // Default to string
+            return value;
         }
     }
 }

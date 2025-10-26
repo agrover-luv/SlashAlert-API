@@ -1,4 +1,6 @@
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Options;
+using MongoDB.Driver;
 using SlashAlert.Api.Services;
 using SlashAlert.Models;
 using SlashAlert.Repositories;
@@ -8,6 +10,7 @@ using SlashAlert.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authorization;
+using SlashAlert.Configuration;
 using UserModel = SlashAlert.Models.User;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -163,8 +166,38 @@ if (databaseSettings?.Provider?.ToUpper() == "COSMOSDB")
     builder.Services.AddScoped<ICosmosDbService, CosmosDbService>();
 }
 
+// Configure MongoDB Client (only if MongoDB provider is selected)
+if (databaseSettings?.Provider?.ToUpper() == "MONGODB")
+{
+    // Configure MongoDB serialization conventions
+    MongoDbConfiguration.Configure();
+    
+    builder.Services.AddScoped<IMongoDbService, MongoDbService>();
+}
+
 // Register Repository Factory
-builder.Services.AddScoped<IRepositoryFactory, RepositoryFactory>();
+builder.Services.AddScoped<IRepositoryFactory>(provider =>
+{
+    var databaseSettings = provider.GetRequiredService<IOptions<DatabaseSettings>>();
+    var csvService = provider.GetRequiredService<ICsvService>();
+    
+    // Get optional services based on provider
+    Container? cosmosContainer = null;
+    IMongoDbService? mongoDbService = null;
+    
+    var providerType = databaseSettings.Value.Provider?.ToUpper();
+    
+    if (providerType == "COSMOSDB")
+    {
+        cosmosContainer = provider.GetService<Container>();
+    }
+    else if (providerType == "MONGODB")
+    {
+        mongoDbService = provider.GetService<IMongoDbService>();
+    }
+    
+    return new RepositoryFactory(databaseSettings, csvService, cosmosContainer, mongoDbService);
+});
 
 // Register individual repositories using factory
 builder.Services.AddScoped<IAlertRepository>(provider => 
@@ -183,6 +216,68 @@ builder.Services.AddScoped<IUserRepository>(provider =>
     provider.GetRequiredService<IRepositoryFactory>().CreateUserRepository());
 
 var app = builder.Build();
+
+// Test MongoDB connection if MongoDB provider is selected
+if (databaseSettings?.Provider?.ToUpper() == "MONGODB")
+{
+    try
+    {
+        using (var scope = app.Services.CreateScope())
+        {
+            var mongoDbService = scope.ServiceProvider.GetService<IMongoDbService>();
+            if (mongoDbService != null)
+            {
+                var isConnected = await mongoDbService.TestConnectionAsync();
+                Console.WriteLine($"MongoDB Atlas Connection: {(isConnected ? "✅ SUCCESS" : "❌ FAILED")}");
+                
+                if (isConnected)
+                {
+                    Console.WriteLine("MongoDB Atlas is successfully configured and connected!");
+                    
+                    // Test all collections for data
+                    var collectionNames = new[] { "products", "Product", "alerts", "Alert", "users", "User", "retailers", "Retailer", "reviews", "Review", "pricehistory", "PriceHistory", "pricecache", "PriceCache" };
+                    
+                    foreach (var collectionName in collectionNames)
+                    {
+                        try
+                        {
+                            var collection = mongoDbService.Database.GetCollection<MongoDB.Bson.BsonDocument>(collectionName);
+                            var count = await collection.CountDocumentsAsync(MongoDB.Driver.Builders<MongoDB.Bson.BsonDocument>.Filter.Empty);
+                            if (count > 0)
+                            {
+                                Console.WriteLine($"✅ Collection '{collectionName}': {count} documents");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"⚪ Collection '{collectionName}': {count} documents");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"❌ Collection '{collectionName}': Error - {ex.Message}");
+                        }
+                    }
+                    
+                    // List all collections in the database
+                    try
+                    {
+                        var collections = await mongoDbService.Database.ListCollectionNamesAsync();
+                        var collectionList = await collections.ToListAsync();
+                        Console.WriteLine($"📋 Available collections: {string.Join(", ", collectionList)}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"❌ Error listing collections: {ex.Message}");
+                    }
+                }
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"MongoDB connection test failed: {ex.Message}");
+    }
+}
 
 // Configure the HTTP request pipeline.
 // Enable CORS
