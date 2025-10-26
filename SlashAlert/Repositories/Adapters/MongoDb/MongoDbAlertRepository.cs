@@ -10,35 +10,35 @@ namespace SlashAlert.Repositories.Adapters.MongoDb
         public MongoDbAlertRepository(IMongoDbService mongoDbService) 
             : base(mongoDbService, "Alert") { }
 
-        public async Task<IEnumerable<Alert>> GetByProductIdAsync(string productId)
+        public async Task<IEnumerable<Alert>> GetByProductIdAsync(string productId, string createdBy)
         {
             var filter = Builders<Alert>.Filter.Eq(x => x.ProductId, productId);
-            return await ExecuteFilterAsync(filter);
+            return await ExecuteFilterAsync(filter, createdBy);
         }
 
-        public async Task<IEnumerable<Alert>> GetByUserIdAsync(string userId)
+        public async Task<IEnumerable<Alert>> GetByUserIdAsync(string userId, string createdBy)
         {
             var filter = Builders<Alert>.Filter.Eq(x => x.UserId, userId);
-            return await ExecuteFilterAsync(filter);
+            return await ExecuteFilterAsync(filter, createdBy);
         }
 
-        public async Task<IEnumerable<Alert>> GetByAlertTypeAsync(string alertType)
+        public async Task<IEnumerable<Alert>> GetByAlertTypeAsync(string alertType, string createdBy)
         {
             var filter = Builders<Alert>.Filter.Regex(x => x.AlertType, new MongoDB.Bson.BsonRegularExpression(alertType, "i"));
-            return await ExecuteFilterAsync(filter);
+            return await ExecuteFilterAsync(filter, createdBy);
         }
 
-        public async Task<IEnumerable<Alert>> GetSentAlertsAsync()
+        public async Task<IEnumerable<Alert>> GetSentAlertsAsync(string createdBy)
         {
             var filter = Builders<Alert>.Filter.Eq(x => x.EmailSent, "true");
-            return await ExecuteFilterAsync(filter);
+            return await ExecuteFilterAsync(filter, createdBy);
         }
 
-        public async Task<IEnumerable<Alert>> GetRecentAlertsAsync(int days = 30)
+        public async Task<IEnumerable<Alert>> GetRecentAlertsAsync(string createdBy, int days = 30)
         {
             var cutoffDate = DateTime.UtcNow.AddDays(-days);
             var filter = Builders<Alert>.Filter.Gte(x => x.CreatedDate, cutoffDate);
-            return await ExecuteFilterAsync(filter);
+            return await ExecuteFilterAsync(filter, createdBy);
         }
     }
 }

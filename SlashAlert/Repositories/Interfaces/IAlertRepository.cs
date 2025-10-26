@@ -4,10 +4,10 @@ namespace SlashAlert.Repositories.Interfaces
 {
     public interface IAlertRepository : IRepository<Alert>
     {
-        Task<IEnumerable<Alert>> GetByProductIdAsync(string productId);
-        Task<IEnumerable<Alert>> GetByUserIdAsync(string userId);
-        Task<IEnumerable<Alert>> GetByAlertTypeAsync(string alertType);
-        Task<IEnumerable<Alert>> GetSentAlertsAsync();
-        Task<IEnumerable<Alert>> GetRecentAlertsAsync(int days = 30);
+        Task<IEnumerable<Alert>> GetByProductIdAsync(string productId, string createdBy);
+        Task<IEnumerable<Alert>> GetByUserIdAsync(string userId, string createdBy);
+        Task<IEnumerable<Alert>> GetByAlertTypeAsync(string alertType, string createdBy);
+        Task<IEnumerable<Alert>> GetSentAlertsAsync(string createdBy);
+        Task<IEnumerable<Alert>> GetRecentAlertsAsync(string createdBy, int days = 30);
     }
 }

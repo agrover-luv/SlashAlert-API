@@ -10,47 +10,47 @@ namespace SlashAlert.Repositories.Adapters.MongoDb
         public MongoDbProductRepository(IMongoDbService mongoDbService) 
             : base(mongoDbService, "Product") { }
 
-        public async Task<IEnumerable<Product>> GetByRetailerAsync(string retailer)
+        public async Task<IEnumerable<Product>> GetByRetailerAsync(string retailer, string createdBy)
         {
             var filter = Builders<Product>.Filter.Regex(x => x.Retailer, new MongoDB.Bson.BsonRegularExpression(retailer, "i"));
-            return await ExecuteFilterAsync(filter);
+            return await ExecuteFilterAsync(filter, createdBy);
         }
 
-        public async Task<IEnumerable<Product>> GetByCategoryAsync(string category)
+        public async Task<IEnumerable<Product>> GetByCategoryAsync(string category, string createdBy)
         {
             var filter = Builders<Product>.Filter.Regex(x => x.Category, new MongoDB.Bson.BsonRegularExpression(category, "i"));
-            return await ExecuteFilterAsync(filter);
+            return await ExecuteFilterAsync(filter, createdBy);
         }
 
-        public async Task<IEnumerable<Product>> GetActiveProductsAsync()
+        public async Task<IEnumerable<Product>> GetActiveProductsAsync(string createdBy)
         {
             var filter = Builders<Product>.Filter.Or(
                 Builders<Product>.Filter.Eq(x => x.IsActive, "true"),
                 Builders<Product>.Filter.Exists(x => x.IsActive, false)
             );
-            return await ExecuteFilterAsync(filter);
+            return await ExecuteFilterAsync(filter, createdBy);
         }
 
-        public async Task<IEnumerable<Product>> GetByCreatedByIdAsync(string createdById)
+        public async Task<IEnumerable<Product>> GetByCreatedByAsync(string createdBy)
         {
-            var filter = Builders<Product>.Filter.Eq(x => x.CreatedById, createdById);
-            return await ExecuteFilterAsync(filter);
+            var filter = Builders<Product>.Filter.Eq(x => x.CreatedBy, createdBy);
+            return await ExecuteFilterAsync(filter, createdBy);
         }
 
-        public async Task<IEnumerable<Product>> GetByPriceRangeAsync(decimal minPrice, decimal maxPrice)
+        public async Task<IEnumerable<Product>> GetByPriceRangeAsync(decimal minPrice, decimal maxPrice, string createdBy)
         {
             // Since CurrentPrice is stored as string, we need to handle string-to-decimal conversion
             var filter = Builders<Product>.Filter.Where(x => 
                 !string.IsNullOrEmpty(x.CurrentPrice) && 
                 decimal.Parse(x.CurrentPrice) >= minPrice && 
                 decimal.Parse(x.CurrentPrice) <= maxPrice);
-            return await ExecuteFilterAsync(filter);
+            return await ExecuteFilterAsync(filter, createdBy);
         }
 
-        public async Task<Product?> GetByUrlAsync(string url)
+        public async Task<Product?> GetByUrlAsync(string url, string createdBy)
         {
             var filter = Builders<Product>.Filter.Eq(x => x.Url, url);
-            return await ExecuteSingleFilterAsync(filter);
+            return await ExecuteSingleFilterAsync(filter, createdBy);
         }
     }
 }

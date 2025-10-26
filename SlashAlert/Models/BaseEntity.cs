@@ -22,10 +22,15 @@ namespace SlashAlert.Models
         [JsonPropertyName("updated_date")]
         public DateTime? UpdatedDate { get; set; }
 
-        [BsonElement("created_by_id")]
+        [BsonElement("created_by")]
         [BsonSerializer(typeof(SlashAlert.Configuration.UniversalStringSerializer))]
-        [JsonPropertyName("created_by_id")]
-        public string CreatedById { get; set; } = string.Empty;
+        [JsonPropertyName("created_by")]
+        public string CreatedBy { get; set; } = string.Empty;
+
+        [BsonElement("user_email")]
+        [BsonSerializer(typeof(SlashAlert.Configuration.UniversalStringSerializer))]
+        [JsonPropertyName("user_email")]
+        public string UserEmail { get; set; } = string.Empty;
 
         [BsonElement("is_sample")]
         [BsonSerializer(typeof(SlashAlert.Configuration.UniversalStringSerializer))]

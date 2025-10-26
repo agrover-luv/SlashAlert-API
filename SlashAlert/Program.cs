@@ -319,7 +319,8 @@ app.MapGet("/", () => Results.Redirect("/swagger"))
 // OAuth User API endpoints (now using repository pattern)
 app.MapGet("/api/users", async (IUserRepository userRepository) =>
 {
-    var users = await userRepository.GetAllAsync();
+    // For user management, we pass an empty string since users don't filter by email
+    var users = await userRepository.GetAllAsync("");
     return Results.Ok(users);
 })
 .WithName("GetUsers")

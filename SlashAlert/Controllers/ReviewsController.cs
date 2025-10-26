@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
 using SlashAlert.Repositories.Interfaces;
 
 namespace SlashAlert.Api.Controllers
@@ -7,10 +6,8 @@ namespace SlashAlert.Api.Controllers
     /// <summary>
     /// Controller for managing review data from multiple sources (Cosmos DB containers, SQL tables, or CSV files)
     /// </summary>
-    [ApiController]
     [Route("api/[controller]")]
-    [Authorize] // Require authentication for all endpoints
-    public class ReviewsController : ControllerBase
+    public class ReviewsController : BaseApiController
     {
         private readonly IReviewRepository _reviewRepository;
 
@@ -22,42 +19,42 @@ namespace SlashAlert.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> Get()
         {
-            var reviews = await _reviewRepository.GetAllAsync();
+            var reviews = await _reviewRepository.GetAllAsync(RequiredUserEmail);
             return Ok(reviews);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var review = await _reviewRepository.GetByIdAsync(id);
+            var review = await _reviewRepository.GetByIdAsync(id, RequiredUserEmail);
             return review != null ? Ok(review) : NotFound();
         }
 
         [HttpGet("rating/{rating}")]
         public async Task<IActionResult> GetByRating(int rating)
         {
-            var reviews = await _reviewRepository.GetByRatingAsync(rating);
+            var reviews = await _reviewRepository.GetByRatingAsync(rating, RequiredUserEmail);
             return Ok(reviews);
         }
 
         [HttpGet("verified")]
         public async Task<IActionResult> GetVerifiedReviews()
         {
-            var reviews = await _reviewRepository.GetVerifiedReviewsAsync();
+            var reviews = await _reviewRepository.GetVerifiedReviewsAsync(RequiredUserEmail);
             return Ok(reviews);
         }
 
         [HttpGet("user/{userName}")]
         public async Task<IActionResult> GetByUserName(string userName)
         {
-            var reviews = await _reviewRepository.GetByUserNameAsync(userName);
+            var reviews = await _reviewRepository.GetByUserNameAsync(userName, RequiredUserEmail);
             return Ok(reviews);
         }
 
         [HttpGet("top-rated")]
         public async Task<IActionResult> GetTopRatedReviews([FromQuery] int minRating = 4)
         {
-            var reviews = await _reviewRepository.GetTopRatedReviewsAsync(minRating);
+            var reviews = await _reviewRepository.GetTopRatedReviewsAsync(RequiredUserEmail, minRating);
             return Ok(reviews);
         }
     }

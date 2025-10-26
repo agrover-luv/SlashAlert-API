@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Text;
@@ -8,10 +7,8 @@ using SlashAlert.Api.Services;
 
 namespace SlashAlert.Api.Controllers
 {
-    [ApiController]
     [Route("api/llm")]
-    [Authorize] // Require authentication for all endpoints
-    public class LlmProxyController : ControllerBase
+    public class LlmProxyController : BaseApiController
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly LlmProxyOptions _options;

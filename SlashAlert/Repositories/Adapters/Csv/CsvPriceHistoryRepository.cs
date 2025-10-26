@@ -8,15 +8,15 @@ namespace SlashAlert.Repositories.Adapters.Csv
     {
         public CsvPriceHistoryRepository(ICsvService csvService) : base(csvService, "PriceHistory_export.csv") { }
 
-        public async Task<IEnumerable<PriceHistory>> GetByProductIdAsync(string productId)
+        public async Task<IEnumerable<PriceHistory>> GetByProductIdAsync(string productId, string userEmail)
         {
-            var priceHistories = await GetAllAsync();
+            var priceHistories = await GetAllAsync(userEmail);
             return priceHistories.Where(ph => ph.ProductId == productId);
         }
 
-        public async Task<IEnumerable<PriceHistory>> GetByDateRangeAsync(DateTime startDate, DateTime endDate)
+        public async Task<IEnumerable<PriceHistory>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, string userEmail)
         {
-            var priceHistories = await GetAllAsync();
+            var priceHistories = await GetAllAsync(userEmail);
             return priceHistories.Where(ph => 
             {
                 if (DateTime.TryParse(ph.Date, out var date))
@@ -27,9 +27,9 @@ namespace SlashAlert.Repositories.Adapters.Csv
             });
         }
 
-        public async Task<IEnumerable<PriceHistory>> GetPriceDropsAsync()
+        public async Task<IEnumerable<PriceHistory>> GetPriceDropsAsync(string userEmail)
         {
-            var priceHistories = await GetAllAsync();
+            var priceHistories = await GetAllAsync(userEmail);
             return priceHistories.Where(ph => 
             {
                 if (decimal.TryParse(ph.ChangePercentage, out var changePercentage))
@@ -40,9 +40,9 @@ namespace SlashAlert.Repositories.Adapters.Csv
             });
         }
 
-        public async Task<PriceHistory?> GetLatestPriceAsync(string productId)
+        public async Task<PriceHistory?> GetLatestPriceAsync(string productId, string userEmail)
         {
-            var priceHistories = await GetByProductIdAsync(productId);
+            var priceHistories = await GetByProductIdAsync(productId, userEmail);
             return priceHistories
                 .Where(ph => DateTime.TryParse(ph.Date, out _))
                 .OrderByDescending(ph => DateTime.Parse(ph.Date))

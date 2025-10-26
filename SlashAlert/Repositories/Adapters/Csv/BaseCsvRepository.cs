@@ -17,15 +17,16 @@ namespace SlashAlert.Repositories.Adapters.Csv
             _fileName = fileName;
         }
 
-        public virtual async Task<IEnumerable<T>> GetAllAsync()
-        {
-            return await Task.FromResult(GetAllEntities());
-        }
-
-        public virtual async Task<T?> GetByIdAsync(string id)
+        public virtual async Task<IEnumerable<T>> GetAllAsync(string userEmail)
         {
             var entities = GetAllEntities();
-            return await Task.FromResult(entities.FirstOrDefault(e => e.Id == id));
+            return await Task.FromResult(entities.Where(e => e.UserEmail == userEmail));
+        }
+
+        public virtual async Task<T?> GetByIdAsync(string id, string userEmail)
+        {
+            var entities = GetAllEntities();
+            return await Task.FromResult(entities.FirstOrDefault(e => e.Id == id && e.UserEmail == userEmail));
         }
 
         public virtual async Task<T> CreateAsync(T entity)
@@ -52,24 +53,24 @@ namespace SlashAlert.Repositories.Adapters.Csv
             return await Task.FromResult(entity);
         }
 
-        public virtual async Task<bool> DeleteAsync(string id)
+        public virtual async Task<bool> DeleteAsync(string id, string userEmail)
         {
             // In a real implementation, you'd remove from CSV file
             // For this POC, we'll simulate success
-            var entity = await GetByIdAsync(id);
+            var entity = await GetByIdAsync(id, userEmail);
             return entity != null;
         }
 
-        public virtual async Task<bool> ExistsAsync(string id)
+        public virtual async Task<bool> ExistsAsync(string id, string userEmail)
         {
-            var entity = await GetByIdAsync(id);
+            var entity = await GetByIdAsync(id, userEmail);
             return entity != null;
         }
 
-        public virtual async Task<int> CountAsync()
+        public virtual async Task<int> CountAsync(string userEmail)
         {
             var entities = GetAllEntities();
-            return await Task.FromResult(entities.Count());
+            return await Task.FromResult(entities.Count(e => e.UserEmail == userEmail));
         }
 
         protected IEnumerable<T> GetAllEntities()

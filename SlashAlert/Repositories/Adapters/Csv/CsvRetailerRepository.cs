@@ -8,15 +8,15 @@ namespace SlashAlert.Repositories.Adapters.Csv
     {
         public CsvRetailerRepository(ICsvService csvService) : base(csvService, "Retailer_export.csv") { }
 
-        public async Task<Retailer?> GetByNameAsync(string name)
+        public async Task<Retailer?> GetByNameAsync(string name, string userEmail)
         {
-            var retailers = await GetAllAsync();
+            var retailers = await GetAllAsync(userEmail);
             return retailers.FirstOrDefault(r => r.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         }
 
-        public async Task<IEnumerable<Retailer>> GetByPriceGuaranteeDaysAsync(int minDays)
+        public async Task<IEnumerable<Retailer>> GetByPriceGuaranteeDaysAsync(int minDays, string userEmail)
         {
-            var retailers = await GetAllAsync();
+            var retailers = await GetAllAsync(userEmail);
             return retailers.Where(r => 
             {
                 if (int.TryParse(r.PriceGuaranteeDays, out var days))

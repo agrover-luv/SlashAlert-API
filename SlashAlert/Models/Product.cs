@@ -99,10 +99,5 @@ namespace SlashAlert.Models
         [BsonSerializer(typeof(SlashAlert.Configuration.UniversalStringSerializer))]
         [JsonPropertyName("screen_size")]
         public string ScreenSize { get; set; } = string.Empty;
-
-        [BsonElement("created_by")]
-        [BsonSerializer(typeof(SlashAlert.Configuration.UniversalStringSerializer))]
-        [JsonPropertyName("created_by")]
-        public string CreatedBy { get; set; } = string.Empty;
     }
 }

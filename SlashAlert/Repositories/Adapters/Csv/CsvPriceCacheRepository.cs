@@ -8,21 +8,21 @@ namespace SlashAlert.Repositories.Adapters.Csv
     {
         public CsvPriceCacheRepository(ICsvService csvService) : base(csvService, "PriceCache_export.csv") { }
 
-        public async Task<PriceCache?> GetByUrlAsync(string url)
+        public async Task<PriceCache?> GetByUrlAsync(string url, string userEmail)
         {
-            var priceCaches = await GetAllAsync();
+            var priceCaches = await GetAllAsync(userEmail);
             return priceCaches.FirstOrDefault(pc => pc.Url == url);
         }
 
-        public async Task<IEnumerable<PriceCache>> GetByProductNameAsync(string productName)
+        public async Task<IEnumerable<PriceCache>> GetByProductNameAsync(string productName, string userEmail)
         {
-            var priceCaches = await GetAllAsync();
+            var priceCaches = await GetAllAsync(userEmail);
             return priceCaches.Where(pc => pc.ProductNameFound.Contains(productName, StringComparison.OrdinalIgnoreCase));
         }
 
-        public async Task<IEnumerable<PriceCache>> GetRecentlyCheckedAsync(int hours = 24)
+        public async Task<IEnumerable<PriceCache>> GetRecentlyCheckedAsync(string userEmail, int hours = 24)
         {
-            var priceCaches = await GetAllAsync();
+            var priceCaches = await GetAllAsync(userEmail);
             var cutoffTime = DateTime.UtcNow.AddHours(-hours);
             
             return priceCaches.Where(pc => 
@@ -35,9 +35,9 @@ namespace SlashAlert.Repositories.Adapters.Csv
             });
         }
 
-        public async Task<IEnumerable<PriceCache>> GetDiscountedItemsAsync()
+        public async Task<IEnumerable<PriceCache>> GetDiscountedItemsAsync(string userEmail)
         {
-            var priceCaches = await GetAllAsync();
+            var priceCaches = await GetAllAsync(userEmail);
             return priceCaches.Where(pc => 
             {
                 if (decimal.TryParse(pc.DiscountAmount, out var discountAmount))

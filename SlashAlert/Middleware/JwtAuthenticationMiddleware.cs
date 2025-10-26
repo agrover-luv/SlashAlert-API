@@ -31,8 +31,20 @@ public class JwtAuthenticationMiddleware
                 if (principal != null)
                 {
                     context.User = principal;
-                    _logger.LogInformation("Successfully authenticated user: {UserId}", 
-                        principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "Unknown");
+                    
+                    // Extract email from claims and store in HttpContext.Items for easy access
+                    var email = principal.FindFirst(ClaimTypes.Email)?.Value ?? 
+                                principal.FindFirst("email")?.Value;
+                    
+                    if (!string.IsNullOrEmpty(email))
+                    {
+                        context.Items["UserEmail"] = email;
+                        _logger.LogInformation("Successfully authenticated user: {Email}", email);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("No email claim found in token for request to {Path}", context.Request.Path);
+                    }
                 }
                 else
                 {

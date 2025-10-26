@@ -16,11 +16,13 @@ namespace SlashAlert.Repositories.Adapters.CosmosDb
             _partitionKeyPath = partitionKeyPath;
         }
 
-        public virtual async Task<IEnumerable<T>> GetAllAsync()
+        public virtual async Task<IEnumerable<T>> GetAllAsync(string userEmail)
         {
             try
             {
-                var query = _container.GetItemQueryIterator<T>(new QueryDefinition("SELECT * FROM c"));
+                var query = _container.GetItemQueryIterator<T>(
+                    new QueryDefinition("SELECT * FROM c WHERE c.user_email = @userEmail")
+                        .WithParameter("@userEmail", userEmail));
                 var results = new List<T>();
 
                 while (query.HasMoreResults)
@@ -37,14 +39,14 @@ namespace SlashAlert.Repositories.Adapters.CosmosDb
             }
         }
 
-        public virtual async Task<T?> GetByIdAsync(string id)
+        public virtual async Task<T?> GetByIdAsync(string id, string userEmail)
         {
             try
             {
-                // For entities that don't have a specific partition key, we'll query by id
                 var query = _container.GetItemQueryIterator<T>(
-                    new QueryDefinition("SELECT * FROM c WHERE c.id = @id")
-                        .WithParameter("@id", id));
+                    new QueryDefinition("SELECT * FROM c WHERE c.id = @id AND c.user_email = @userEmail")
+                        .WithParameter("@id", id)
+                        .WithParameter("@userEmail", userEmail));
 
                 while (query.HasMoreResults)
                 {
@@ -95,12 +97,12 @@ namespace SlashAlert.Repositories.Adapters.CosmosDb
             }
         }
 
-        public virtual async Task<bool> DeleteAsync(string id)
+        public virtual async Task<bool> DeleteAsync(string id, string userEmail)
         {
             try
             {
                 // For simplicity, we'll query first to get the partition key
-                var entity = await GetByIdAsync(id);
+                var entity = await GetByIdAsync(id, userEmail);
                 if (entity == null) return false;
 
                 await _container.DeleteItemAsync<T>(id, PartitionKey.None);
@@ -112,18 +114,19 @@ namespace SlashAlert.Repositories.Adapters.CosmosDb
             }
         }
 
-        public virtual async Task<bool> ExistsAsync(string id)
+        public virtual async Task<bool> ExistsAsync(string id, string userEmail)
         {
-            var entity = await GetByIdAsync(id);
+            var entity = await GetByIdAsync(id, userEmail);
             return entity != null;
         }
 
-        public virtual async Task<int> CountAsync()
+        public virtual async Task<int> CountAsync(string userEmail)
         {
             try
             {
                 var query = _container.GetItemQueryIterator<int>(
-                    new QueryDefinition("SELECT VALUE COUNT(1) FROM c"));
+                    new QueryDefinition("SELECT VALUE COUNT(1) FROM c WHERE c.user_email = @userEmail")
+                        .WithParameter("@userEmail", userEmail));
 
                 while (query.HasMoreResults)
                 {
@@ -165,6 +168,67 @@ namespace SlashAlert.Repositories.Adapters.CosmosDb
             try
             {
                 var query = _container.GetItemQueryIterator<T>(queryDefinition);
+
+                while (query.HasMoreResults)
+                {
+                    var response = await query.ReadNextAsync();
+                    return response.FirstOrDefault();
+                }
+
+                return null;
+            }
+            catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+        }
+
+        protected async Task<IEnumerable<T>> ExecuteQueryWithEmailFilterAsync(QueryDefinition queryDefinition, string userEmail)
+        {
+            try
+            {
+                // Add email filter to the existing query
+                var emailFilteredQuery = new QueryDefinition($"SELECT * FROM ({queryDefinition.QueryText}) c WHERE c.user_email = @userEmail");
+                
+                // Copy parameters from original query
+                foreach (var parameter in queryDefinition.GetQueryParameters())
+                {
+                    emailFilteredQuery.WithParameter(parameter.Name, parameter.Value);
+                }
+                emailFilteredQuery.WithParameter("@userEmail", userEmail);
+
+                var query = _container.GetItemQueryIterator<T>(emailFilteredQuery);
+                var results = new List<T>();
+
+                while (query.HasMoreResults)
+                {
+                    var response = await query.ReadNextAsync();
+                    results.AddRange(response.ToList());
+                }
+
+                return results;
+            }
+            catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+            {
+                return new List<T>();
+            }
+        }
+
+        protected async Task<T?> ExecuteSingleQueryWithEmailFilterAsync(QueryDefinition queryDefinition, string userEmail)
+        {
+            try
+            {
+                // Add email filter to the existing query
+                var emailFilteredQuery = new QueryDefinition($"SELECT * FROM ({queryDefinition.QueryText}) c WHERE c.user_email = @userEmail");
+                
+                // Copy parameters from original query
+                foreach (var parameter in queryDefinition.GetQueryParameters())
+                {
+                    emailFilteredQuery.WithParameter(parameter.Name, parameter.Value);
+                }
+                emailFilteredQuery.WithParameter("@userEmail", userEmail);
+
+                var query = _container.GetItemQueryIterator<T>(emailFilteredQuery);
 
                 while (query.HasMoreResults)
                 {

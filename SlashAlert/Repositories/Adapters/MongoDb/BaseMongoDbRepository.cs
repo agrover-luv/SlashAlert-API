@@ -22,14 +22,15 @@ namespace SlashAlert.Repositories.Adapters.MongoDb
         }
 
         /// <summary>
-        /// Gets all entities from the collection
+        /// Gets all entities from the collection filtered by created_by
         /// </summary>
-        public virtual async Task<IEnumerable<T>> GetAllAsync()
+        public virtual async Task<IEnumerable<T>> GetAllAsync(string createdBy)
         {
             try
             {
-                var filter = Builders<T>.Filter.Empty;
+                var filter = Builders<T>.Filter.Eq(x => x.CreatedBy, createdBy);
                 var result = await _collection.FindAsync(filter);
+                var count = await _collection.CountDocumentsAsync(FilterDefinition<T>.Empty);
                 return await result.ToListAsync();
             }
             catch (Exception ex)
@@ -39,13 +40,16 @@ namespace SlashAlert.Repositories.Adapters.MongoDb
         }
 
         /// <summary>
-        /// Gets an entity by ID
+        /// Gets an entity by ID filtered by created_by
         /// </summary>
-        public virtual async Task<T?> GetByIdAsync(string id)
+        public virtual async Task<T?> GetByIdAsync(string id, string createdBy)
         {
             try
             {
-                var filter = Builders<T>.Filter.Eq(x => x.Id, id);
+                var filter = Builders<T>.Filter.And(
+                    Builders<T>.Filter.Eq(x => x.Id, id),
+                    Builders<T>.Filter.Eq(x => x.CreatedBy, createdBy)
+                );
                 var result = await _collection.FindAsync(filter);
                 return await result.FirstOrDefaultAsync();
             }
@@ -68,6 +72,8 @@ namespace SlashAlert.Repositories.Adapters.MongoDb
                 }
                 entity.CreatedDate = DateTime.UtcNow;
                 entity.UpdatedDate = DateTime.UtcNow;
+                
+                // Note: CreatedBy should be set by the calling controller before creating the entity
 
                 await _collection.InsertOneAsync(entity);
                 return entity;
@@ -87,12 +93,15 @@ namespace SlashAlert.Repositories.Adapters.MongoDb
             {
                 entity.UpdatedDate = DateTime.UtcNow;
                 
-                var filter = Builders<T>.Filter.Eq(x => x.Id, entity.Id);
+                var filter = Builders<T>.Filter.And(
+                    Builders<T>.Filter.Eq(x => x.Id, entity.Id),
+                    Builders<T>.Filter.Eq(x => x.CreatedBy, entity.CreatedBy)
+                );
                 var result = await _collection.ReplaceOneAsync(filter, entity);
                 
                 if (result.MatchedCount == 0)
                 {
-                    throw new InvalidOperationException($"Entity with ID {entity.Id} not found for update");
+                    throw new InvalidOperationException($"Entity with ID {entity.Id} not found for update or user not authorized");
                 }
                 
                 return entity;
@@ -104,13 +113,16 @@ namespace SlashAlert.Repositories.Adapters.MongoDb
         }
 
         /// <summary>
-        /// Deletes an entity by ID
+        /// Deletes an entity by ID filtered by created_by
         /// </summary>
-        public virtual async Task<bool> DeleteAsync(string id)
+        public virtual async Task<bool> DeleteAsync(string id, string createdBy)
         {
             try
             {
-                var filter = Builders<T>.Filter.Eq(x => x.Id, id);
+                var filter = Builders<T>.Filter.And(
+                    Builders<T>.Filter.Eq(x => x.Id, id),
+                    Builders<T>.Filter.Eq(x => x.CreatedBy, createdBy)
+                );
                 var result = await _collection.DeleteOneAsync(filter);
                 return result.DeletedCount > 0;
             }
@@ -121,13 +133,16 @@ namespace SlashAlert.Repositories.Adapters.MongoDb
         }
 
         /// <summary>
-        /// Checks if an entity exists by ID
+        /// Checks if an entity exists by ID filtered by created_by
         /// </summary>
-        public virtual async Task<bool> ExistsAsync(string id)
+        public virtual async Task<bool> ExistsAsync(string id, string createdBy)
         {
             try
             {
-                var filter = Builders<T>.Filter.Eq(x => x.Id, id);
+                var filter = Builders<T>.Filter.And(
+                    Builders<T>.Filter.Eq(x => x.Id, id),
+                    Builders<T>.Filter.Eq(x => x.CreatedBy, createdBy)
+                );
                 var count = await _collection.CountDocumentsAsync(filter);
                 return count > 0;
             }
@@ -138,13 +153,14 @@ namespace SlashAlert.Repositories.Adapters.MongoDb
         }
 
         /// <summary>
-        /// Gets count of entities in the collection
+        /// Gets count of entities in the collection filtered by created_by
         /// </summary>
-        public virtual async Task<int> CountAsync()
+        public virtual async Task<int> CountAsync(string createdBy)
         {
             try
             {
-                var count = await _collection.CountDocumentsAsync(Builders<T>.Filter.Empty);
+                var filter = Builders<T>.Filter.Eq(x => x.CreatedBy, createdBy);
+                var count = await _collection.CountDocumentsAsync(filter);
                 return (int)count;
             }
             catch (Exception ex)
@@ -154,13 +170,17 @@ namespace SlashAlert.Repositories.Adapters.MongoDb
         }
 
         /// <summary>
-        /// Helper method to execute a filter query
+        /// Helper method to execute a filter query with created_by filtering
         /// </summary>
-        protected async Task<IEnumerable<T>> ExecuteFilterAsync(FilterDefinition<T> filter)
+        protected async Task<IEnumerable<T>> ExecuteFilterAsync(FilterDefinition<T> filter, string createdBy)
         {
             try
             {
-                var result = await _collection.FindAsync(filter);
+                var combinedFilter = Builders<T>.Filter.And(
+                    filter,
+                    Builders<T>.Filter.Eq(x => x.CreatedBy, createdBy)
+                );
+                var result = await _collection.FindAsync(combinedFilter);
                 return await result.ToListAsync();
             }
             catch (Exception ex)
@@ -170,13 +190,17 @@ namespace SlashAlert.Repositories.Adapters.MongoDb
         }
 
         /// <summary>
-        /// Helper method to execute a filter query and return a single result
+        /// Helper method to execute a filter query and return a single result with created_by filtering
         /// </summary>
-        protected async Task<T?> ExecuteSingleFilterAsync(FilterDefinition<T> filter)
+        protected async Task<T?> ExecuteSingleFilterAsync(FilterDefinition<T> filter, string createdBy)
         {
             try
             {
-                var result = await _collection.FindAsync(filter);
+                var combinedFilter = Builders<T>.Filter.And(
+                    filter,
+                    Builders<T>.Filter.Eq(x => x.CreatedBy, createdBy)
+                );
+                var result = await _collection.FindAsync(combinedFilter);
                 return await result.FirstOrDefaultAsync();
             }
             catch (Exception ex)

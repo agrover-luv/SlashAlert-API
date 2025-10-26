@@ -10,17 +10,17 @@ namespace SlashAlert.Repositories.Adapters.MongoDb
         public MongoDbRetailerRepository(IMongoDbService mongoDbService) 
             : base(mongoDbService, "Retailer") { }
 
-        public async Task<Retailer?> GetByNameAsync(string name)
+        public async Task<Retailer?> GetByNameAsync(string name, string createdBy)
         {
             var filter = Builders<Retailer>.Filter.Regex(x => x.Name, new MongoDB.Bson.BsonRegularExpression($"^{System.Text.RegularExpressions.Regex.Escape(name)}$", "i"));
-            return await ExecuteSingleFilterAsync(filter);
+            return await ExecuteSingleFilterAsync(filter, createdBy);
         }
 
-        public async Task<IEnumerable<Retailer>> GetByPriceGuaranteeDaysAsync(int minDays)
+        public async Task<IEnumerable<Retailer>> GetByPriceGuaranteeDaysAsync(int minDays, string createdBy)
         {
             // Since PriceGuaranteeDays is stored as string, we need to convert for comparison
             var filter = Builders<Retailer>.Filter.Where(x => !string.IsNullOrEmpty(x.PriceGuaranteeDays) && int.Parse(x.PriceGuaranteeDays) >= minDays);
-            return await ExecuteFilterAsync(filter);
+            return await ExecuteFilterAsync(filter, createdBy);
         }
     }
 }

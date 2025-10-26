@@ -14,15 +14,15 @@ namespace SlashAlert.Repositories.Adapters.Sql
             // TODO: Initialize SQL connection
         }
 
-        public virtual async Task<IEnumerable<T>> GetAllAsync()
+        public virtual async Task<IEnumerable<T>> GetAllAsync(string userEmail)
         {
-            // TODO: Implement SQL query to get all entities
+            // TODO: Implement SQL query to get all entities filtered by user email
             throw new NotImplementedException("SQL repository not yet implemented");
         }
 
-        public virtual async Task<T?> GetByIdAsync(string id)
+        public virtual async Task<T?> GetByIdAsync(string id, string userEmail)
         {
-            // TODO: Implement SQL query to get entity by ID
+            // TODO: Implement SQL query to get entity by ID filtered by user email
             throw new NotImplementedException("SQL repository not yet implemented");
         }
 
@@ -38,21 +38,21 @@ namespace SlashAlert.Repositories.Adapters.Sql
             throw new NotImplementedException("SQL repository not yet implemented");
         }
 
-        public virtual async Task<bool> DeleteAsync(string id)
+        public virtual async Task<bool> DeleteAsync(string id, string userEmail)
         {
-            // TODO: Implement SQL delete
+            // TODO: Implement SQL delete filtered by user email
             throw new NotImplementedException("SQL repository not yet implemented");
         }
 
-        public virtual async Task<bool> ExistsAsync(string id)
+        public virtual async Task<bool> ExistsAsync(string id, string userEmail)
         {
-            // TODO: Implement SQL exists check
+            // TODO: Implement SQL exists check filtered by user email
             throw new NotImplementedException("SQL repository not yet implemented");
         }
 
-        public virtual async Task<int> CountAsync()
+        public virtual async Task<int> CountAsync(string userEmail)
         {
-            // TODO: Implement SQL count
+            // TODO: Implement SQL count filtered by user email
             throw new NotImplementedException("SQL repository not yet implemented");
         }
     }
